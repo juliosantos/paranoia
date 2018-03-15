@@ -167,7 +167,7 @@ module Paranoia
   # we called #destroy
   def restore_associated_records
     destroyed_associations = self.class.reflect_on_all_associations.select do |association|
-      association.options[:dependent] == :destroy
+      %i|destroy delete|.include? association.options[:dependent]
     end
 
     destroyed_associations.each do |association|

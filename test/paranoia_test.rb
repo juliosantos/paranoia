@@ -731,6 +731,26 @@ class ParanoiaTest < test_framework
     assert_nil belongsTos[1].deleted_at
   end
 
+  # covers #320
+  def test_restoring_recursive_dependent_delete
+    hasOnes = 2.times.map { ParanoidModelWithDependentDelete.create }
+    belongTos = 2.times.map { ParanoidModelWithBelong.create }
+
+    hasOnes[0].update paranoid_model_with_belong: belongsTos[0]
+    hasOnes[1].update paranoid_model_with_belong: belongsTos[1]
+
+    hasOnes.each(&:destroy)
+
+    ParanoidModelWithDependentDelete.restore(hasOnes[1].id, :recursive => true)
+    hasOnes.each(&:reload)
+    belongsTos.each(&:reload)
+
+    refute_nil hasOnes[0].deleted_at
+    refute_nil belongsTos[0].deleted_at
+    assert_nil hasOnes[1].deleted_at
+    assert_nil belongsTos[1].deleted_at
+  end
+
   # covers #131
   def test_has_one_really_destroy_with_nil
     model = ParanoidModelWithHasOne.create
@@ -1166,6 +1186,11 @@ end
 class ParanoidModelWithTimestamp < ActiveRecord::Base
   belongs_to :parent_model
   acts_as_paranoid
+end
+
+class ParanoidModelWithDependentDelete < ActiveRecord::Base
+  acts_as_paranoid
+  has_one :paranoid_model_with_belong, dependent: :delete
 end
 
 class NotParanoidModelWithBelong < ActiveRecord::Base
